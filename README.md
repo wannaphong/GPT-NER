@@ -42,11 +42,51 @@ Note that you should change the directory for the input/output file and the used
 
 We follow the official steps to access the GPT-* Models, and the document can be found [here](https://platform.openai.com/docs/api-reference/introduction). Before you run our scripts, you need to add **OPENAI_API_KEY**, which you can find it in your account profile, to the environment variable by the command `export OPENAI_API_KEY="YOUR_KEY"`.
 
-To get preditions, please run `openai_access/scripts/access_ai.sh`, and the used arguments are listed in file `openai_access/get_results_mrc_knn.py`.
+#### Processing Modes
 
-For self-verification, please run `openai_access/scripts/verify.sh`, and the used arguments are listed in file `openai_access/verify_results.py`.
+The `get_results_mrc_knn.py` script supports two processing modes:
 
-**Note that accessing to the `GPT-3` is very expensive, we thus strongly advise you to start from our sampled 100-dataset.**
+1. **Parallel Processing (Default)**: Fast synchronous processing for small to medium datasets
+2. **Batch API Processing**: Cost-effective asynchronous processing with up to 50% cost savings for large datasets
+
+For detailed usage instructions and examples, see [openai_access/BATCH_PROCESSING_USAGE.md](openai_access/BATCH_PROCESSING_USAGE.md).
+
+#### Basic Usage
+
+To get predictions using parallel processing (default):
+```bash
+python openai_access/get_results_mrc_knn.py \
+    --source-dir <data_dir> \
+    --source-name test \
+    --train-name train \
+    --data-name CONLL \
+    --example-dir <examples_dir> \
+    --example-name test.knn \
+    --write-dir <output_dir> \
+    --write-name results.txt
+```
+
+To get predictions using batch processing (for large datasets):
+```bash
+python openai_access/get_results_mrc_knn.py \
+    --source-dir <data_dir> \
+    --source-name test \
+    --train-name train \
+    --data-name CONLL \
+    --example-dir <examples_dir> \
+    --example-name test.knn \
+    --write-dir <output_dir> \
+    --write-name results.txt \
+    --use-batch \
+    --batch-file batch.jsonl \
+    --wait-for-batch
+```
+
+Alternatively, you can use the shell scripts:
+- For predictions: run `openai_access/scripts/access_ai.sh`
+- For self-verification: run `openai_access/scripts/verify.sh`
+
+**Note that accessing to the `GPT-3` is very expensive, we thus strongly advise you to start from our sampled 100-dataset. For large datasets, consider using the Batch API mode to save up to 50% on costs.**
 
 ### Evaluate
 
