@@ -222,6 +222,156 @@ class TestBatchProcessingIntegration(unittest.TestCase):
         self.assertEqual(result2, ['result1', 'result2'])
 
 
+class TestMrc2PromptFunction(unittest.TestCase):
+    """Test cases for mrc2prompt function with bounds checking."""
+    
+    @patch.dict(os.environ, {'OPENAI_API_KEY': 'test-api-key'})
+    def test_mrc2prompt_with_shorter_last_results(self):
+        """Test that mrc2prompt handles last_results shorter than mrc_data without IndexError."""
+        from get_results_mrc_knn import mrc2prompt
+        
+        # Create mock data
+        mrc_data = [
+            {
+                "context": "Test sentence 1",
+                "entity_label": "PER",
+                "start_position": [],
+                "end_position": []
+            },
+            {
+                "context": "Test sentence 2",
+                "entity_label": "PER",
+                "start_position": [],
+                "end_position": []
+            },
+            {
+                "context": "Test sentence 3",
+                "entity_label": "PER",
+                "start_position": [],
+                "end_position": []
+            }
+        ]
+        
+        train_mrc_data = [
+            {
+                "context": "Training example 1",
+                "start_position": [],
+                "end_position": []
+            }
+        ]
+        
+        example_idx = [[0], [0], [0]]
+        
+        # last_results has only 1 entry (with error), but mrc_data has 3
+        # Index 0: has error so should be processed
+        # Index 1,2: beyond last_results length, should be processed
+        last_results = ["FRIDAY-ERROR-ErrorType.unknown"]
+        
+        # This should not raise IndexError
+        try:
+            prompts = mrc2prompt(
+                mrc_data=mrc_data,
+                data_name="CONLL",
+                example_idx=example_idx,
+                train_mrc_data=train_mrc_data,
+                example_num=1,
+                last_results=last_results
+            )
+            # Should process all 3 items (0 has error, 1 and 2 are beyond bounds)
+            self.assertEqual(len(prompts), 3)
+        except IndexError:
+            self.fail("mrc2prompt raised IndexError when last_results is shorter than mrc_data")
+    
+    @patch.dict(os.environ, {'OPENAI_API_KEY': 'test-api-key'})
+    def test_mrc2prompt_skips_non_error_results(self):
+        """Test that mrc2prompt skips entries with non-error results in last_results."""
+        from get_results_mrc_knn import mrc2prompt
+        
+        # Create mock data
+        mrc_data = [
+            {
+                "context": "Test sentence 1",
+                "entity_label": "PER",
+                "start_position": [],
+                "end_position": []
+            },
+            {
+                "context": "Test sentence 2",
+                "entity_label": "PER",
+                "start_position": [],
+                "end_position": []
+            }
+        ]
+        
+        train_mrc_data = [
+            {
+                "context": "Training example 1",
+                "start_position": [],
+                "end_position": []
+            }
+        ]
+        
+        example_idx = [[0], [0]]
+        
+        # First result is successful (not an error), second is error
+        last_results = ["Success result", "FRIDAY-ERROR-ErrorType.unknown"]
+        
+        prompts = mrc2prompt(
+            mrc_data=mrc_data,
+            data_name="CONLL",
+            example_idx=example_idx,
+            train_mrc_data=train_mrc_data,
+            example_num=1,
+            last_results=last_results
+        )
+        
+        # Should only process the second item (index 1 with error)
+        self.assertEqual(len(prompts), 1)
+    
+    @patch.dict(os.environ, {'OPENAI_API_KEY': 'test-api-key'})
+    def test_mrc2prompt_without_last_results(self):
+        """Test that mrc2prompt processes all items when last_results is None."""
+        from get_results_mrc_knn import mrc2prompt
+        
+        # Create mock data
+        mrc_data = [
+            {
+                "context": "Test sentence 1",
+                "entity_label": "PER",
+                "start_position": [],
+                "end_position": []
+            },
+            {
+                "context": "Test sentence 2",
+                "entity_label": "PER",
+                "start_position": [],
+                "end_position": []
+            }
+        ]
+        
+        train_mrc_data = [
+            {
+                "context": "Training example 1",
+                "start_position": [],
+                "end_position": []
+            }
+        ]
+        
+        example_idx = [[0], [0]]
+        
+        prompts = mrc2prompt(
+            mrc_data=mrc_data,
+            data_name="CONLL",
+            example_idx=example_idx,
+            train_mrc_data=train_mrc_data,
+            example_num=1,
+            last_results=None
+        )
+        
+        # Should process all items
+        self.assertEqual(len(prompts), 2)
+
+
 def run_tests():
     """Run all tests."""
     loader = unittest.TestLoader()
@@ -231,6 +381,7 @@ def run_tests():
     suite.addTests(loader.loadTestsFromTestCase(TestBatchProcessingArguments))
     suite.addTests(loader.loadTestsFromTestCase(TestNerAccessFunction))
     suite.addTests(loader.loadTestsFromTestCase(TestBatchProcessingIntegration))
+    suite.addTests(loader.loadTestsFromTestCase(TestMrc2PromptFunction))
     
     # Run tests
     runner = unittest.TextTestRunner(verbosity=2)
