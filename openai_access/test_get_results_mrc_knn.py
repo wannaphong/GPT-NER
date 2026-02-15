@@ -370,6 +370,65 @@ class TestMrc2PromptFunction(unittest.TestCase):
         
         # Should process all items
         self.assertEqual(len(prompts), 2)
+    
+    @patch.dict(os.environ, {'OPENAI_API_KEY': 'test-api-key'})
+    def test_mrc2prompt_with_shorter_example_idx(self):
+        """Test that mrc2prompt handles example_idx shorter than mrc_data without IndexError."""
+        from get_results_mrc_knn import mrc2prompt
+        
+        # Create mock data with mrc_data longer than example_idx
+        mrc_data = [
+            {
+                "context": "Test sentence 1",
+                "entity_label": "PER",
+                "start_position": [],
+                "end_position": []
+            },
+            {
+                "context": "Test sentence 2",
+                "entity_label": "PER",
+                "start_position": [],
+                "end_position": []
+            },
+            {
+                "context": "Test sentence 3",
+                "entity_label": "PER",
+                "start_position": [],
+                "end_position": []
+            },
+            {
+                "context": "Test sentence 4",
+                "entity_label": "PER",
+                "start_position": [],
+                "end_position": []
+            }
+        ]
+        
+        train_mrc_data = [
+            {
+                "context": "Training example 1",
+                "start_position": [],
+                "end_position": []
+            }
+        ]
+        
+        # example_idx has only 2 entries but mrc_data has 4
+        example_idx = [[0], [0]]
+        
+        # This should not raise IndexError
+        try:
+            prompts = mrc2prompt(
+                mrc_data=mrc_data,
+                data_name="CONLL",
+                example_idx=example_idx,
+                train_mrc_data=train_mrc_data,
+                example_num=1,
+                last_results=None
+            )
+            # Should process all 4 items (indices 2 and 3 will have no examples)
+            self.assertEqual(len(prompts), 4)
+        except IndexError:
+            self.fail("mrc2prompt raised IndexError when example_idx is shorter than mrc_data")
 
 
 def run_tests():

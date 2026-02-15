@@ -62,6 +62,9 @@ def mrc2prompt(mrc_data, data_name="CONLL", example_idx=None, train_mrc_data=Non
 
     def get_example(index):
         exampel_prompt = ""
+        # Check if index is within bounds of example_idx
+        if index >= len(example_idx):
+            return exampel_prompt
         for idx_ in example_idx[index][:example_num]:
             context = train_mrc_data[idx_]["context"]
             context_list = context.strip().split()
