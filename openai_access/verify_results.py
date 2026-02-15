@@ -115,18 +115,13 @@ def transferPrompt(mrc_data, gpt_results, data_name="CONLL", knn_results=None, k
         prompts_nums.append(prompts_num)
     return prompts, entity_index, prompts_nums
 
-def ner_access(openai_access, prompts, batch=16):
+def ner_access(openai_access, prompts):
+    """
+    Process verification prompts using parallel requests.
+    The AccessBase class handles parallel processing internally.
+    """
     print("accessing ...")
-    results = []
-    start_ = 0
-    pbar = tqdm(total=len(prompts))
-    while start_ < len(prompts):
-        end_ = min(start_+batch, len(prompts))
-        results = results + openai_access.get_multiple_sample(prompts[start_:end_])
-        pbar.update(end_-start_)
-        start_ = end_
-    pbar.close()
-    return results
+    return openai_access.get_multiple_sample(prompts)
 
 def construct_results(gpt_results, entity_index, prompts_num, verify_results):
 
@@ -175,7 +170,8 @@ if __name__ == '__main__':
         top_p=1,
         frequency_penalty=0,
         presence_penalty=0,
-        best_of=1
+        best_of=1,
+        max_workers=10
     )
 
     mrc_test = read_mrc_data(dir_=args.mrc_dir, prefix=args.mrc_name)
@@ -186,7 +182,7 @@ if __name__ == '__main__':
         knn_results = read_knn_file(file_name=args.knn_file)
 
     prompts, entity_idx, prompts_nums = transferPrompt(mrc_data=mrc_test, gpt_results=gpt_results, data_name=args.data_name, knn_results=knn_results, knn_num=args.knn_num)
-    verify_results = ner_access(openai_access=openai_access, prompts=prompts, batch=1)
+    verify_results = ner_access(openai_access=openai_access, prompts=prompts)
     final_results = construct_results(gpt_results=gpt_results, entity_index=entity_idx, prompts_num=prompts_nums, verify_results=verify_results)
 
     # print(final_results)
