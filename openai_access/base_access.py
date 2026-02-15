@@ -32,6 +32,17 @@ class AccessBase(object):
             raise ValueError("OPENAI_API_KEY environment variable not set")
         self.client = OpenAI(api_key=api_key)
 
+    def _is_chat_model(self):
+        """
+        Determines if the engine is a chat model or a completion model.
+        
+        Returns:
+            bool: True if chat model, False if completion model
+        """
+        # "instruct" models (gpt-3.5-turbo-instruct) use the legacy Completion API
+        # "gpt-4", "gpt-3.5-turbo" (non-instruct), "gpt-4o" use the Chat API
+        return "instruct" not in self.engine and ("gpt-4" in self.engine or "turbo" in self.engine or "o1" in self.engine)
+
     def _call_model_single(self, prompt):
         """
         Makes a single request to OpenAI, handling both Chat and Completion models.
@@ -39,10 +50,7 @@ class AccessBase(object):
         num_retries = 0
         delay = INITIAL_DELAY
 
-        # Determine if we should use Chat or Completion API
-        # "instruct" models (gpt-3.5-turbo-instruct) use the legacy Completion API
-        # "gpt-4", "gpt-3.5-turbo" (non-instruct), "gpt-4o" use the Chat API
-        is_chat_model = "instruct" not in self.engine and ("gpt-4" in self.engine or "turbo" in self.engine or "o1" in self.engine)
+        is_chat_model = self._is_chat_model()
 
         while True:
             try:
@@ -119,7 +127,7 @@ class AccessBase(object):
         Returns:
             Path to the created batch file
         """
-        is_chat_model = "instruct" not in self.engine and ("gpt-4" in self.engine or "turbo" in self.engine or "o1" in self.engine)
+        is_chat_model = self._is_chat_model()
         
         with open(output_file, 'w') as f:
             for idx, prompt in enumerate(prompt_list):
@@ -172,9 +180,12 @@ class AccessBase(object):
         with open(batch_file, 'rb') as f:
             file_object = self.client.files.create(file=f, purpose="batch")
         
+        # Determine endpoint based on model type
+        endpoint = "/v1/chat/completions" if self._is_chat_model() else "/v1/completions"
+        
         batch = self.client.batches.create(
             input_file_id=file_object.id,
-            endpoint="/v1/chat/completions" if "instruct" not in self.engine and ("gpt-4" in self.engine or "turbo" in self.engine or "o1" in self.engine) else "/v1/completions",
+            endpoint=endpoint,
             completion_window="24h",
             metadata={"description": description or "GPT-NER batch processing"}
         )
@@ -274,14 +285,15 @@ class AccessBase(object):
         
         with tqdm(desc=f"Waiting for batch {batch_id}", unit="check") as pbar:
             while True:
+                # Check timeout before sleeping to ensure accurate timeout behavior
+                if time.time() - start_time > max_wait:
+                    raise TimeoutError(f"Batch {batch_id} did not complete within {max_wait} seconds")
+                
                 status = self.get_batch_status(batch_id)
                 pbar.set_postfix({"status": status["status"]})
                 
                 if status["status"] in ["completed", "failed", "expired", "cancelled"]:
                     return status
-                
-                if time.time() - start_time > max_wait:
-                    raise TimeoutError(f"Batch {batch_id} did not complete within {max_wait} seconds")
                 
                 time.sleep(check_interval)
                 pbar.update(1)

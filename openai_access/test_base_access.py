@@ -24,11 +24,7 @@ from base_access import AccessBase
 class TestAccessBase(unittest.TestCase):
     """Test cases for AccessBase class."""
     
-    def setUp(self):
-        """Set up test fixtures."""
-        # Mock the OpenAI API key
-        os.environ['OPENAI_API_KEY'] = 'test-api-key'
-    
+    @patch.dict(os.environ, {'OPENAI_API_KEY': 'test-api-key'})
     def test_initialization_with_default_workers(self):
         """Test AccessBase initialization with default max_workers."""
         access = AccessBase(
@@ -41,6 +37,7 @@ class TestAccessBase(unittest.TestCase):
         self.assertEqual(access.temperature, 0.0)
         self.assertEqual(access.max_tokens, 512)
     
+    @patch.dict(os.environ, {'OPENAI_API_KEY': 'test-api-key'})
     def test_initialization_with_custom_workers(self):
         """Test AccessBase initialization with custom max_workers."""
         access = AccessBase(
@@ -49,20 +46,15 @@ class TestAccessBase(unittest.TestCase):
         )
         self.assertEqual(access.max_workers, 5)
     
+    @patch.dict(os.environ, {}, clear=True)
     def test_initialization_without_api_key(self):
         """Test that initialization fails without API key."""
-        # Remove API key
-        if 'OPENAI_API_KEY' in os.environ:
-            del os.environ['OPENAI_API_KEY']
-        
         with self.assertRaises(ValueError) as context:
             AccessBase(engine="gpt-4o-mini")
         
         self.assertIn("OPENAI_API_KEY", str(context.exception))
-        
-        # Restore API key
-        os.environ['OPENAI_API_KEY'] = 'test-api-key'
     
+    @patch.dict(os.environ, {'OPENAI_API_KEY': 'test-api-key'})
     def test_create_batch_file_chat_model(self):
         """Test batch file creation for chat models."""
         access = AccessBase(engine="gpt-4o-mini", max_tokens=100)
@@ -103,6 +95,7 @@ class TestAccessBase(unittest.TestCase):
             if os.path.exists(batch_file):
                 os.remove(batch_file)
     
+    @patch.dict(os.environ, {'OPENAI_API_KEY': 'test-api-key'})
     def test_create_batch_file_completion_model(self):
         """Test batch file creation for completion models."""
         access = AccessBase(engine="gpt-3.5-turbo-instruct", max_tokens=100)
@@ -125,12 +118,14 @@ class TestAccessBase(unittest.TestCase):
             if os.path.exists(batch_file):
                 os.remove(batch_file)
     
+    @patch.dict(os.environ, {'OPENAI_API_KEY': 'test-api-key'})
     def test_get_multiple_sample_empty_list(self):
         """Test get_multiple_sample with empty prompt list."""
         access = AccessBase(engine="gpt-4o-mini")
         results = access.get_multiple_sample([])
         self.assertEqual(results, [])
     
+    @patch.dict(os.environ, {'OPENAI_API_KEY': 'test-api-key'})
     @patch('base_access.AccessBase._call_model_single')
     def test_get_multiple_sample_with_prompts(self, mock_call):
         """Test get_multiple_sample with multiple prompts."""
@@ -148,6 +143,7 @@ class TestAccessBase(unittest.TestCase):
         self.assertEqual(results[2], "Response 3")
         self.assertEqual(mock_call.call_count, 3)
     
+    @patch.dict(os.environ, {'OPENAI_API_KEY': 'test-api-key'})
     def test_is_chat_model_detection(self):
         """Test chat model detection logic."""
         # Chat models
@@ -167,10 +163,7 @@ class TestAccessBase(unittest.TestCase):
 class TestBatchFileFormat(unittest.TestCase):
     """Test cases for batch file format validation."""
     
-    def setUp(self):
-        """Set up test fixtures."""
-        os.environ['OPENAI_API_KEY'] = 'test-api-key'
-    
+    @patch.dict(os.environ, {'OPENAI_API_KEY': 'test-api-key'})
     def test_batch_file_jsonl_format(self):
         """Test that batch file is valid JSONL."""
         access = AccessBase(engine="gpt-4o-mini")
@@ -195,6 +188,7 @@ class TestBatchFileFormat(unittest.TestCase):
             if os.path.exists(batch_file):
                 os.remove(batch_file)
     
+    @patch.dict(os.environ, {'OPENAI_API_KEY': 'test-api-key'})
     def test_batch_file_custom_ids_are_unique(self):
         """Test that custom IDs are unique and sequential."""
         access = AccessBase(engine="gpt-4o-mini")
