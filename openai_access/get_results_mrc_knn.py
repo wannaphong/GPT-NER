@@ -24,6 +24,12 @@ def get_parser():
     parser.add_argument("--write-dir", type=str, help="directory for the output")
     parser.add_argument("--write-name", type=str, help="file name for the output")
     
+    # Batch processing arguments
+    parser.add_argument("--use-batch", action="store_true", help="use OpenAI Batch API for processing")
+    parser.add_argument("--batch-file", type=str, default=None, help="path to save/load batch JSONL file")
+    parser.add_argument("--batch-id", type=str, default=None, help="existing batch ID to retrieve results from")
+    parser.add_argument("--wait-for-batch", action="store_true", help="wait for batch completion (use with --use-batch)")
+    
     return parser
 
 def read_mrc_data(dir_, prefix="test"):
@@ -117,13 +123,58 @@ def mrc2prompt(mrc_data, data_name="CONLL", example_idx=None, train_mrc_data=Non
     
     return results
 
-def ner_access(openai_access, ner_pairs):
+def ner_access(openai_access, ner_pairs, use_batch=False, batch_file=None, batch_id=None, wait_for_batch=False):
     """
-    Process NER prompts using parallel requests.
-    The AccessBase class handles parallel processing internally.
+    Process NER prompts using either parallel requests or batch processing.
+    
+    Args:
+        openai_access: AccessBase instance
+        ner_pairs: List of prompts to process
+        use_batch: If True, use Batch API instead of parallel processing
+        batch_file: Path to save/load batch JSONL file (required if use_batch=True)
+        batch_id: Existing batch ID to retrieve results from (optional)
+        wait_for_batch: If True, wait for batch completion before returning (use with use_batch=True)
+    
+    Returns:
+        List of results, or batch_id string (if use_batch=True and not waiting)
     """
     print("tagging ...")
-    return openai_access.get_multiple_sample(ner_pairs)
+    
+    if batch_id:
+        # Retrieve results from an existing batch
+        print(f"Retrieving results from batch {batch_id}...")
+        return openai_access.retrieve_batch_results(batch_id)
+    
+    if use_batch:
+        # Use Batch API for processing
+        if not batch_file:
+            raise ValueError("--batch-file is required when using --use-batch")
+        
+        print(f"Creating batch file: {batch_file}")
+        openai_access.create_batch_file(ner_pairs, batch_file)
+        
+        print(f"Submitting batch...")
+        batch_id = openai_access.submit_batch(batch_file, description="GPT-NER MRC KNN processing")
+        print(f"Batch submitted with ID: {batch_id}")
+        
+        if wait_for_batch:
+            print("Waiting for batch completion...")
+            final_status = openai_access.wait_for_batch(batch_id)
+            print(f"Batch completed with status: {final_status['status']}")
+            
+            if final_status['status'] == 'completed':
+                print("Retrieving results...")
+                return openai_access.retrieve_batch_results(batch_id)
+            else:
+                raise RuntimeError(f"Batch processing failed with status: {final_status['status']}")
+        else:
+            # Return batch ID for later retrieval
+            print(f"\nBatch is processing. To retrieve results later, run:")
+            print(f"  python get_results_mrc_knn.py --batch-id {batch_id} --write-dir <dir> --write-name <name>")
+            return batch_id
+    else:
+        # Use parallel processing (default)
+        return openai_access.get_multiple_sample(ner_pairs)
 
 def write_file(labels, dir_, last_name):
     print("writing ...")
@@ -171,15 +222,38 @@ if __name__ == '__main__':
         max_workers=10
     )
 
-    ner_test = read_mrc_data(args.source_dir, prefix=args.source_name)
-    mrc_train = read_mrc_data(dir_=args.source_dir, prefix=args.train_name)
-    example_idx = read_idx(args.example_dir, args.example_name)
+    # Handle batch retrieval mode
+    if args.batch_id:
+        print(f"Retrieving results from batch {args.batch_id}...")
+        results = ner_access(openai_access, [], batch_id=args.batch_id)
+        write_file(results, args.write_dir, args.write_name)
+        print(f"Results written to {args.write_dir}/{args.write_name}")
+    else:
+        # Normal processing mode (parallel or batch)
+        ner_test = read_mrc_data(args.source_dir, prefix=args.source_name)
+        mrc_train = read_mrc_data(dir_=args.source_dir, prefix=args.train_name)
+        example_idx = read_idx(args.example_dir, args.example_name)
 
-    last_results = None
-    if args.last_results != "None":
-        last_results = read_results(dir_=args.last_results)
+        last_results = None
+        if args.last_results != "None":
+            last_results = read_results(dir_=args.last_results)
 
-    prompts = mrc2prompt(mrc_data=ner_test, data_name=args.data_name, example_idx=example_idx, train_mrc_data=mrc_train, example_num=args.example_num, last_results=last_results)
-    results = ner_access(openai_access=openai_access, ner_pairs=prompts)
-    # print(results)
-    write_file(results, args.write_dir, args.write_name)
+        prompts = mrc2prompt(mrc_data=ner_test, data_name=args.data_name, example_idx=example_idx, train_mrc_data=mrc_train, example_num=args.example_num, last_results=last_results)
+        
+        results = ner_access(
+            openai_access=openai_access, 
+            ner_pairs=prompts,
+            use_batch=args.use_batch,
+            batch_file=args.batch_file,
+            wait_for_batch=args.wait_for_batch
+        )
+        
+        # Handle different return types
+        if isinstance(results, str):
+            # Batch ID returned (batch submitted without wait)
+            print(f"\nBatch submitted with ID: {results}")
+            print(f"Results will be available after batch completes.")
+        else:
+            # Results list returned (parallel mode or batch with wait)
+            write_file(results, args.write_dir, args.write_name)
+            print(f"Results written to {args.write_dir}/{args.write_name}")
