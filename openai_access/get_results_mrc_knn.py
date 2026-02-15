@@ -117,18 +117,13 @@ def mrc2prompt(mrc_data, data_name="CONLL", example_idx=None, train_mrc_data=Non
     
     return results
 
-def ner_access(openai_access, ner_pairs, batch=16):
+def ner_access(openai_access, ner_pairs):
+    """
+    Process NER prompts using parallel requests.
+    The AccessBase class handles parallel processing internally.
+    """
     print("tagging ...")
-    results = []
-    start_ = 0
-    pbar = tqdm(total=len(ner_pairs))
-    while start_ < len(ner_pairs):
-        end_ = min(start_+batch, len(ner_pairs))
-        results = results + openai_access.get_multiple_sample(ner_pairs[start_:end_])
-        pbar.update(end_-start_)
-        start_ = end_
-    pbar.close()
-    return results
+    return openai_access.get_multiple_sample(ner_pairs)
 
 def write_file(labels, dir_, last_name):
     print("writing ...")
@@ -147,7 +142,8 @@ def test():
         top_p=1,
         frequency_penalty=0,
         presence_penalty=0,
-        best_of=1
+        best_of=1,
+        max_workers=10
     )
 
     ner_test = read_mrc_data("/data2/wangshuhe/gpt3_ner/gpt3-data/conll_mrc/low_resource", prefix="test")[:4]
@@ -155,7 +151,7 @@ def test():
     example_idx = read_idx("/home/wangshuhe/gpt-ner/openai_access/low_resource_data/conll_en", prefix="test.8.embedding")
 
     prompts = mrc2prompt(mrc_data=ner_test, data_name="CONLL", example_idx=example_idx, train_mrc_data=mrc_train, example_num=4)
-    results = ner_access(openai_access=openai_access, ner_pairs=prompts, batch=16)
+    results = ner_access(openai_access=openai_access, ner_pairs=prompts)
     print(results)
 
 if __name__ == '__main__':
@@ -171,7 +167,8 @@ if __name__ == '__main__':
         top_p=1,
         frequency_penalty=0,
         presence_penalty=0,
-        best_of=1
+        best_of=1,
+        max_workers=10
     )
 
     ner_test = read_mrc_data(args.source_dir, prefix=args.source_name)
@@ -183,6 +180,6 @@ if __name__ == '__main__':
         last_results = read_results(dir_=args.last_results)
 
     prompts = mrc2prompt(mrc_data=ner_test, data_name=args.data_name, example_idx=example_idx, train_mrc_data=mrc_train, example_num=args.example_num, last_results=last_results)
-    results = ner_access(openai_access=openai_access, ner_pairs=prompts, batch=4)
+    results = ner_access(openai_access=openai_access, ner_pairs=prompts)
     # print(results)
     write_file(results, args.write_dir, args.write_name)
