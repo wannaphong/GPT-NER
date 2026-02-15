@@ -2,6 +2,13 @@
 
 ## Introduction
 This repo contains code for the paper [GPT-NER: Named Entity Recognition via Large LanguageModels](https://arxiv.org/pdf/2304.10428.pdf).
+
+**New Features:**
+- ⚡ **Improved Parallel Processing**: Configurable concurrent requests for faster processing
+- 🚀 **Batch API Support**: Process large datasets asynchronously with up to 50% cost savings
+- 📊 **Better Progress Tracking**: Enhanced progress bars and status monitoring
+
+See [openai_access/BATCH_PROCESSING.md](openai_access/BATCH_PROCESSING.md) for detailed usage guide.
 ```latex
 @article{wang2023gpt,
   title={GPT-NER: Named Entity Recognition via Large Language Models},
@@ -16,10 +23,10 @@ This repo contains code for the paper [GPT-NER: Named Entity Recognition via Lar
 ### Requirements
 
 * python>=3.7.3
-* openai==0.27.2
+* openai>=1.0.0 (updated from 0.27.2 for better performance)
 * simcse==0.4
 
-This repor mainly use two addtional packages: [SimCSE](https://github.com/princeton-nlp/SimCSE) and [OpenAI](https://github.com/openai/openai-python). So, if you want to know more about the arguments used in codes, please refer to the corresponding documents.
+This repo mainly uses two additional packages: [SimCSE](https://github.com/princeton-nlp/SimCSE) and [OpenAI](https://github.com/openai/openai-python). The code has been updated to use the modern OpenAI Python SDK (v1.0+) which provides better performance and new features like the Batch API.
 
 ### Proposed Dataset
 For the full NER dataset, we follow [MRC-NER](https://arxiv.org/pdf/1910.11476.pdf) for preprocessing, and you can directly download these [here](https://github.com/ShannonAI/mrc-for-flat-nested-ner).
