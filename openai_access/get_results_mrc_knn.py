@@ -136,7 +136,7 @@ def ner_access(openai_access, ner_pairs, use_batch=False, batch_file=None, batch
         wait_for_batch: If True, wait for batch completion before returning (use with use_batch=True)
     
     Returns:
-        List of results or batch_id (if use_batch=True and not waiting)
+        List of results, or batch_id string (if use_batch=True and not waiting)
     """
     print("tagging ...")
     
@@ -154,24 +154,24 @@ def ner_access(openai_access, ner_pairs, use_batch=False, batch_file=None, batch
         openai_access.create_batch_file(ner_pairs, batch_file)
         
         print(f"Submitting batch...")
-        submitted_batch_id = openai_access.submit_batch(batch_file, description="GPT-NER MRC KNN processing")
-        print(f"Batch submitted with ID: {submitted_batch_id}")
+        batch_id = openai_access.submit_batch(batch_file, description="GPT-NER MRC KNN processing")
+        print(f"Batch submitted with ID: {batch_id}")
         
         if wait_for_batch:
             print("Waiting for batch completion...")
-            final_status = openai_access.wait_for_batch(submitted_batch_id)
+            final_status = openai_access.wait_for_batch(batch_id)
             print(f"Batch completed with status: {final_status['status']}")
             
             if final_status['status'] == 'completed':
                 print("Retrieving results...")
-                return openai_access.retrieve_batch_results(submitted_batch_id)
+                return openai_access.retrieve_batch_results(batch_id)
             else:
                 raise RuntimeError(f"Batch processing failed with status: {final_status['status']}")
         else:
             # Return batch ID for later retrieval
             print(f"\nBatch is processing. To retrieve results later, run:")
-            print(f"  python get_results_mrc_knn.py --batch-id {submitted_batch_id} --write-dir <dir> --write-name <name>")
-            return [f"BATCH_ID:{submitted_batch_id}"]
+            print(f"  python get_results_mrc_knn.py --batch-id {batch_id} --write-dir <dir> --write-name <name>")
+            return batch_id
     else:
         # Use parallel processing (default)
         return openai_access.get_multiple_sample(ner_pairs)
@@ -248,9 +248,12 @@ if __name__ == '__main__':
             wait_for_batch=args.wait_for_batch
         )
         
-        # Only write results if not using batch mode without wait (which returns batch ID)
-        if not args.use_batch or args.wait_for_batch:
+        # Handle different return types
+        if isinstance(results, str):
+            # Batch ID returned (batch submitted without wait)
+            print(f"\nBatch submitted with ID: {results}")
+            print(f"Results will be available after batch completes.")
+        else:
+            # Results list returned (parallel mode or batch with wait)
             write_file(results, args.write_dir, args.write_name)
             print(f"Results written to {args.write_dir}/{args.write_name}")
-        else:
-            print(f"\nBatch submitted. Batch ID saved in instructions above.")

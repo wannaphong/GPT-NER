@@ -122,8 +122,8 @@ class TestNerAccessFunction(unittest.TestCase):
             wait_for_batch=False
         )
         
-        # Should return batch ID wrapped in list
-        self.assertEqual(results, ['BATCH_ID:batch_456'])
+        # Should return batch ID as string
+        self.assertEqual(results, 'batch_456')
         mock_access.create_batch_file.assert_called_once_with(prompts, '/tmp/batch.jsonl')
         mock_access.submit_batch.assert_called_once()
         # Should NOT wait or retrieve
@@ -208,7 +208,7 @@ class TestBatchProcessingIntegration(unittest.TestCase):
             wait_for_batch=False
         )
         
-        self.assertEqual(result1, ['BATCH_ID:batch_workflow'])
+        self.assertEqual(result1, 'batch_workflow')
         
         # Step 2: Retrieve results
         mock_access.retrieve_batch_results.return_value = ['result1', 'result2']
@@ -240,5 +240,6 @@ def run_tests():
 
 
 if __name__ == '__main__':
+    import sys
     success = run_tests()
-    exit(0 if success else 1)
+    sys.exit(0 if success else 1)
