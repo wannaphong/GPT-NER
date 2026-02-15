@@ -2,9 +2,13 @@
 Logging
 """
 import logging
+import os
 from logging.handlers import TimedRotatingFileHandler
 
 from pythonjsonlogger import jsonlogger
+log_dir = "./logs"
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
 
 readable_log_handler = logging.StreamHandler()  # pylint: disable=C0103
 readable_log_handler.setFormatter(

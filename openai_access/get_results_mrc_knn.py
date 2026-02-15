@@ -141,7 +141,7 @@ def write_file(labels, dir_, last_name):
 
 def test():
     openai_access = AccessBase(
-        engine="text-davinci-003",
+        engine="gpt-4o-mini",
         temperature=0.0,
         max_tokens=512,
         top_p=1,
@@ -165,7 +165,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     openai_access = AccessBase(
-        engine="text-davinci-003",
+        engine="gpt-4o-mini",
         temperature=0.0,
         max_tokens=512,
         top_p=1,

@@ -60,5 +60,25 @@ FULL_DATA = {
         "PER": ("PER", "人名和虚构的人物形象"),
         "GPE": ("GPE", "按照国家,城市,州县划分的地理区域"),
         "ORG": ("ORG", "组织包括公司,政府党派,学校,政府,新闻机构"),
+    },
+    "VISTEC": {
+        "PER": ("person", "are named persons, excluding titles unless used as an address term"),
+        "ROLE": ("role", "are job titles or roles within an organization"),
+        "ORG_GOV": ("government organization", "are government bodies, agencies, or political parties"),
+        "ORG_COM": ("commercial organization", "are private companies, corporations, private universities, or non-profits"),
+        "MEDIA_FIN": ("financial media", "are media outlets, channels, or platforms related to finance/investment"),
+        "TICKER": ("ticker symbol", "are stock market symbols (often uppercase)"),
+        "FUND": ("fund", "are mutual funds or investment funds"),
+        "METRIC_FIN": ("financial metric", "are numerical values indicating financial statistics, amounts, prices, or percentages"),
+        "ACT_FIN": ("financial activity", "are financial events, projects, or plans"),
+        "DATE_TIME": ("date and time", "are specific dates, times, durations, or fiscal quarters"),
+        "PRO_FIN": ("financial product", "are financial products like bonds, insurance, loans, or credit cards"),
+        "PRO_GEN": ("general product", "are general consumer products or goods (non-financial)"),
+        "SERVICE_FIN": ("financial service", "are services related to finance, investment, or banking"),
+        "LOC_PLACE": ("place", "are specific locations, buildings, venues, or landmarks"),
+        "LOC_WORLD": ("world region", "are continents or global regions"),
+        "LOC_COUNTR": ("country", "are nations or countries"),
+        "LOC_LOCALRE": ("local region", "are provinces, states, districts, or local areas"),
+        "LOC_ADD": ("address", "are complete postal addresses")
     }
 }
