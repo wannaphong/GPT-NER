@@ -92,7 +92,7 @@ def mrc2prompt(mrc_data, data_name="CONLL", example_idx=None, train_mrc_data=Non
     results = []
     for item_idx in tqdm(range(len(mrc_data))):
 
-        if last_results is not None and last_results[item_idx].strip() != "FRIDAY-ERROR-ErrorType.unknown":
+        if last_results is not None and item_idx < len(last_results) and last_results[item_idx].strip() != "FRIDAY-ERROR-ErrorType.unknown":
             continue
 
         item_ = mrc_data[item_idx]
